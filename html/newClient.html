@@ -2,26 +2,72 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
     <head>
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-        <title>Untitled Document</title>
+        <link rel="stylesheet" href="../css/a.css" />
+        <title>NEW ARIMAA</title>
     </head>
-    	    <script src="../js/arimaa.js"></script>
+    <body>
+    	<div id='board_container'></div>
+
+
+    	<script src="../js/arimaa.js"></script>
 	    <script src="../js/es5-shim.min.js"></script>
 	    <script src="../js/es5-sham.min.js"></script>
 	    <script src="../js/console-polyfill.js"></script>
 	    <script src="../js/react.js"></script>
 	    <script src="../js/JSXTransformer.js"></script>
 	    <script type="text/jsx">
+	      function numberToPieceClass(n) {
+	      	switch(n) {
+	      		case 1:
+					return "animal GoldRabbit";
+	      		case 2:
+	      			return "animal GoldCat";
+	      		case 3:
+	      			return "animal GoldDog";
+	      		case 4:
+	      			return "animal GoldHorse";
+	      		case 5:
+	      			return "animal GoldCamel";
+	      		case 6:
+	      			return "animal GoldElephant";
+	      		case 9:
+	      			return "animal SilverRabbit";
+	      		case 10:
+	      			return "animal SilverCat";
+	      		case 11:
+	      			return "animal SilverDog";
+	      		case 12:
+	      			return "animal SilverHorse";
+	      		case 13:
+	      			return "animal SilverCamel";
+	      		case 14:
+	      			return "animal SilverElephant";
+	      		default:
+	      			return "";
+	      	}
+	      }
+
 	      var ArimaaGame = React.createClass({
 	        render: function() {
 	          var message = 'hi';
 	          var rows = [];
+
+	          var ranks = "87654321";
+	          var files = "abcdefgh";
+
 	          for(var i=0;i<8;i++) {
 	          	var sqs = [];
 	          	for(var j=0;j<8;j++) {
-	          		var qqqq = 8*i+j;
-	          		sqs.push(<div class="bl" key={qqqq}></div>);
+	          		var squareName =  files.charAt(j)+ranks.charAt(i);
+	          		var sqNum = 16*i+j;
+	          		var piece = this.props.arimaa.get_piece_on_square(sqNum);
+	          		var pieceClassName = numberToPieceClass(piece);
+	          		var sqColor = ((i+j)%2) ? "bl" : "wh";
+	          		var c = sqColor + " " + pieceClassName;
+
+	          		sqs.push(<div className={c} key={squareName}></div>);
 	          	}
-	          	rows.push(<div class="row">{sqs}</div>);
+	          	rows.push(<div className="row" key={i}>{sqs}</div>);
 	          }
 	          return <div id="board">{rows}</div>;
 	        }
@@ -29,8 +75,9 @@
 
 
 	      var arimaa = new Arimaa();
+	      arimaa.set_position("3/8/3R4/3r4/8/8/8/8");
 	      React.render(<ArimaaGame arimaa={arimaa}/>, document.getElementById('board_container'));
 	    </script>
-    <body>
+
     </body>
 </html>

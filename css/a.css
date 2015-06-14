@@ -1,3 +1,17 @@
+.animal { background: url('../images/animals_60x60.png') no-repeat top left; width: 80px; height: 80px;  } 
+.animal.GoldRabbit { background-position: 0 0; } 
+.animal.GoldCat { background-position: 0 -80px; } 
+.animal.GoldDog { background-position: 0 -160px; } 
+.animal.GoldHorse { background-position: 0 -240px; } 
+.animal.GoldCamel { background-position: 0 -320px; } 
+.animal.GoldElephant { background-position: 0 -400px; } 
+.animal.SilverRabbit { background-position: 0 -480px; } 
+.animal.SilverCat { background-position: 0 -560px; } 
+.animal.SilverDog { background-position: 0 -640px; } 
+.animal.SilverHorse { background-position: 0 -720px; } 
+.animal.SilverCamel { background-position: 0 -800px; } 
+.animal.SilverElephant { background-position: 0 -880px; } 
+
 .btn {
   font-family: Arial;
   color: #ffffff;
