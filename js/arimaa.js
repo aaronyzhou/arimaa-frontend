@@ -14,6 +14,13 @@ var Arimaa = function(options) {
       a1: 112, b1: 113, c1: 114, d1: 115, e1: 116, f1: 117, g1: 118, h1: 119
  	};
 
+ 	var TRAPS = {
+ 		c3: 82,
+ 		c6: 34,
+ 		f3: 85,
+ 		f6: 37
+ 	}
+
 	var EMPTY = 0;
 	var GRABBIT = 1;
 	var GCAT = 2;
@@ -36,6 +43,10 @@ var Arimaa = function(options) {
 		EAST:1,
 		WEST:-1,
 		SOUTH:16,
+		n:-16,
+		e:1,
+		w:-1,
+		s:16,
 		'-16':'n',
 		'1':'e',
 		'-1':'w',
@@ -66,12 +77,13 @@ var Arimaa = function(options) {
 
 	var options = options || {
 		fen: "8/8/8/8/8/8/8/8",
-		moveNumber:1,
+		halfmoveNumber:1,
 		colorToMove:GOLD,
 		inPush:false,
 		stepsLeft:4,
 		ongoingMove:[],
-		history:[],
+		boardHistory:[],
+		moveHistory:[]
 	};
 
 	var fen = options['fen'] || "8/8/8/8/8/8/8/8";
@@ -79,11 +91,12 @@ var Arimaa = function(options) {
 	for(var i=0;i<128;i++) {board[i] = 0;}
 
 	parse_fen(fen);
-	
-	var history = options['history'] || []; //nb empty array is truthy
+
+	var boardHistory = options['boardHistory'] || []; //nb empty array is truthy
+	var moveHistory = options['moveHistory'] || [];
 	var ongoingMove = options['ongoingMove'] || [];
-	var moveNumber = options['moveNumber'] || 1; 
-	var colorToMove = GOLD || options['colorToMove']; //GOLD == 0 is falsey
+	var halfmoveNumber = options['halfmoveNumber'] || 1;
+	var colorToMove = options['colorToMove'] || 0; //GOLD == 0 is falsey
 
 	//need to do this since 0 is falsey
 	//though we probably never need to consider starting a position
@@ -94,24 +107,81 @@ var Arimaa = function(options) {
 	}
 
 	//don't want to default to undefined
-	var inPush = false || options['inPush'];
+	var inPush = options['inPush'] || false;
+	var pushedPiece = 0;
+	var pushingPiece = 0; //ADD THESE TO OPTIONS LATER?
 
-
+	//make this public? don't know how useful
+	function square_name(sqNum) {
+		var x = (8-Math.floor(sqNum / 16)).toString();
+		var y = sqNum % 8;
+		return "abcdefgh".charAt(y) + x;
+	}
 
 	//returns true if move can be completed
 	//reasons for false:position same, 3x repetition
 	function complete_move() {
+		var currentFen = generate_fen();
+		if(boardHistory.length) {
+			if(currentFen === boardHistory[boardHistory.length-1]) return false; //no change
+		}
+		var count = 0;
+		for(var i=0;i<boardHistory.length;i++) {
+			if(currentFen == boardHistory[i]) count += 1;
+			if(count == 2) return false;
+		}
+		boardHistory.push(currentFen);
+		colorTo  = (colorToMove === GOLD) ? SILVER : GOLD;
+		inPush = false;
+		stepsLeft = 4;
+		moveHistory.push(ongoingMove);
+		ongoingMove = [];
+		halfmoveNumber += 1;
 
+		//check victory conds???
+
+		return true;
+	}
+
+	//adds trap step to list of moves if any pieces trapped
+	//NEEDS TESTING!!!!!!
+	function remove_trapped() {
+		for(trap in TRAPS) {
+			var sqNum = TRAPS[trap];
+			var piece = get_piece_on_square(sqNum);
+			if(piece === EMPTY) continue;
+			var neighbors = get_neighboring_pieces(sqNum);
+			var hasFriendlyNeighbor = false;
+
+			for(var i=0;i<neighbors.length;i++) {
+				var neighbor = neighbors[i]['piece'];
+				if((piece & COLOR) === (neighbor & COLOR)) {
+					hasFriendlyNeighbor = true;
+				}
+			}
+
+			if(!hasFriendlyNeighbor) {
+				ongoingMove.push({piece:piece,square:sqNum,location:'x', string:'xxxx'}); //TODO: ADD STRING TO STEP OBJ
+				remove_piece_from_square(sqNum);
+			}
+		}
 	}
 
 
-	//move is a list of steps
+	//move is a list of step strings
 	function add_move(move) {
+		var isValid = true;
+
 		for(var i=0;i<move.length;i++) {
 			step = move[i];
-
-			console.log(step);
+			if(!add_step(step)) isValid = false;
 		}
+
+		if(!isValid) {
+			//undoes the move
+			return false;
+		}
+		return true;
 	}
 
 	//assumes valid square_num
@@ -152,7 +222,7 @@ var Arimaa = function(options) {
 
 	function is_adjacent_to(squareNum, otherSquareNum) {
 		var d = squareNum - otherSquareNum;
-		return (d==DIRECTIONS.NORTH) || (d==DIRECTIONS.SOUTH) 
+		return (d==DIRECTIONS.NORTH) || (d==DIRECTIONS.SOUTH)
 								 || (d==DIRECTIONS.EAST)
 								 || (d==DIRECTIONS.WEST);
 	}
@@ -166,6 +236,7 @@ var Arimaa = function(options) {
 		if(piece === EMPTY) return false;
 		if(((piece & COLOR)>>3) == colorToMove) return false;
 		if(inPush) return false;
+
 		var neighbors = get_neighboring_pieces(squareNum);
 		for(var i=0;i<neighbors.length;i++) {
 			var neighbor = neighbors[i];
@@ -187,7 +258,7 @@ var Arimaa = function(options) {
 		if(ongoingMove.length == 0) return false;
 		if(inPush) return false;
 		var prevStep = ongoingMove[ongoingMove.length-1];
-		var prevSquare = prevSquare['location'];
+		var prevSquare = prevSquare['square'];
 		var pullingPiece = prevSquare['piece'];
 		if(!is_adjacent_to(squareNum, prevSquare)) return false;
 		if((pullingPiece & DECOLOR) == (piece & DECOLOR)) return false; //this check could be better?
@@ -203,6 +274,53 @@ var Arimaa = function(options) {
 		return steps;
 	}
 
+	//step is a string
+	//ONLY VERY BASIC ERROR CHECKING!!!!
+	function add_step(stepString) {
+		var piece = PIECES.indexOf(stepString.charAt(0));
+		var location = stepString.charAt(1)+stepString.charAt(2);
+		var direction = stepString.charAt(3);
+		var squareNum = SQUARES[location];
+		var stepObj = {piece:piece,square:squareNum,direction:direction,string:stepString};
+
+		var p = get_piece_on_square(squareNum);
+		if(p !== piece) return false;
+
+		if(direction === 'x') {
+			//CHECK IF WE ACTUALLY SHOULD REMOVE THIS PIECE LATER
+			remove_piece_from_square(squareNum);
+			return true;
+		}
+
+		var nextSquare = squareNum+DIRECTIONS[direction];
+		//trying to move off the board or into occupied territory
+		if(  (nextSquare & 0x88) != 0  ||  board[nextSquare] !== EMPTY )
+		{
+			return false;
+		}
+
+		//diff color
+		if(((piece & COLOR) >> 3) != colorToMove) {
+			if(can_be_pulled(squareNum)) {
+				//do nothing
+			} else if(can_be_pushed(squareNum)) {
+				inPush = true;
+			} else {
+				return false;
+			}
+		}
+
+		remove_piece_from_square(squareNum);
+		place_piece(p, nextSquare);
+
+		ongoingMove.push(stepObj);
+
+		//CHECK TRAPS HERE!!!!
+		remove_trapped();
+
+		return true;
+	}
+
 	//currently assumes valid square
 	function generate_steps_for_piece_on_square(squareNum) {
 		var piece = board[squareNum];
@@ -210,45 +328,73 @@ var Arimaa = function(options) {
 		if(piece === EMPTY || stepsLeft === 0) {
 			return steps;
 		}
+		//should be called prevStep
 		var prevMove = null;
 		if(ongoingMove.length > 0) {
 			prevMove = ongoingMove[ongoingMove.length-1];
 		}
 
+		//actually it might make more sense to add a 'push' object to a step object
+		if(inPush) {
+			if(is_adjacent_to(squareNum, prevMove['square'])) {
+				if((piece & DECOLOR) > (prevMove['piece'] & DECOLOR)) {
+					steps.push({piece:piece,square:squareNum,direction:DIRECTIONS[prevMove['square']-squareNum]});//need a better way to get the dircetion
+				}
+			}
+			return steps;
+		}
+
+		//TODO: ADD STEP STRING TO STEP OBJ
+
 		//same color
 		if((piece & COLOR) >> 3 == colorToMove && !is_frozen(squareNum)) {
-			if ((((squareNum + DIRECTIONS.NORTH) & 0x88) === 0) && (board[squareNum+DIRECTIONS.NORTH] === EMPTY))
+			if ((((squareNum + DIRECTIONS.NORTH) & 0x88) === 0) && (board[squareNum+DIRECTIONS.NORTH] === EMPTY) && piece !== GRABBIT)
 				steps.push({piece:piece,square:squareNum,direction:'n'});
-			if ((((squareNum + DIRECTIONS.SOUTH) & 0x88) === 0) && (board[squareNum+DIRECTIONS.SOUTH] === EMPTY))
+			if ((((squareNum + DIRECTIONS.SOUTH) & 0x88) === 0) && (board[squareNum+DIRECTIONS.SOUTH] === EMPTY) && piece !== SRABBIT)
 				steps.push({piece:piece,square:squareNum,direction:'s'});
 			if ((((squareNum + DIRECTIONS.EAST) & 0x88) === 0) && (board[squareNum+DIRECTIONS.EAST] === EMPTY))
 				steps.push({piece:piece,square:squareNum,direction:'e'});
 			if ((((squareNum + DIRECTIONS.WEST) & 0x88) === 0) && (board[squareNum+DIRECTIONS.WEST] === EMPTY))
 				steps.push({piece:piece,square:squareNum,direction:'w'});
 		} else { //enemy piece
-
+			if(can_be_pushed(squareNum)) {
+				if ((((squareNum + DIRECTIONS.NORTH) & 0x88) === 0) && (board[squareNum+DIRECTIONS.NORTH] === EMPTY))
+					steps.push({piece:piece,square:squareNum,direction:'n'});
+				if ((((squareNum + DIRECTIONS.SOUTH) & 0x88) === 0) && (board[squareNum+DIRECTIONS.SOUTH] === EMPTY))
+					steps.push({piece:piece,square:squareNum,direction:'s'});
+				if ((((squareNum + DIRECTIONS.EAST) & 0x88) === 0) && (board[squareNum+DIRECTIONS.EAST] === EMPTY))
+					steps.push({piece:piece,square:squareNum,direction:'e'});
+				if ((((squareNum + DIRECTIONS.WEST) & 0x88) === 0) && (board[squareNum+DIRECTIONS.WEST] === EMPTY))
+					steps.push({piece:piece,square:squareNum,direction:'w'});
+			} else if(can_be_pulled(squareNum)) { //use else if to prevent adding duplicate step
+				var dir = DIRECTIONS[prevMove['square']-squareNum];
+				steps.push({piece:piece,square:squareNum,direction:dir});
+			}
 		}
 		return steps;
 	}
 
 
 	//must be valid piece string and square string
+	//NOT ANYMORE!!!!
 	//square must be empty
-	function place_piece(piece, square) {
-		if(!(square in SQUARES)) return false;
-		if(piece == " ") return false;
-		if(PIECES.indexOf(piece) == -1) return false;
-		if(board[SQUARES[square]]) return false;
-		board[SQUARES[square]] = piece;
+	function place_piece(piece, squareNum) {
+		//if(!(square in SQUARES)) return false;
+		//if(piece == " ") return false;
+		//if(PIECES.indexOf(piece) == -1) return false;
+		//if(board[SQUARES[square]]) return false;
+		//board[SQUARES[square]] = piece;
+		if(squareNum & 0x88) return false;
+		board[squareNum] = piece;
 		return true;
 	}
 
 	//returns the piece removed
-	//returns null for invalid square and EMPTY for empty square
-	function remove_piece_from_square(square) {
-		if(!(square in SQUARES)) {return null;}
-		var p = get_piece_on_square(square);
-		board[SQUARES[square]] = EMPTY;
+	//returns false for invalid square and EMPTY for empty square
+	function remove_piece_from_square(squareNum) {
+		if(squareNum & 0x88) {return false;}
+		var p = get_piece_on_square(squareNum);
+		board[squareNum] = EMPTY;
 		return p;
 	}
 
@@ -323,6 +469,7 @@ var Arimaa = function(options) {
 		return fen;
     }
 
+	//TEST THIS!!!
 	function is_goal() {
 		var gGoal = false;
 	  	for (var ix = 0x70; ix < 0x78; ix++) {
@@ -366,11 +513,32 @@ var Arimaa = function(options) {
         return s;
 	}
 
+	function get_move_list_string() {
+		var s = '';
+
+		for(var i=0;i<moveHistory.length;i++) {
+			s += 1+Math.floor(i/2);
+			if(i%2) {
+				s += "s ";
+			} else {
+				s += "g ";
+			}
+			var move = moveHistory[i];
+			for(var j=0;j<move.length;j++) {
+				var step = move[j];
+				s += step['string'];
+			}
+			s += "\n";
+		}
+		return s;
+	}
 
 	return {
-
+		PIECES: Piece,
+		SQUARES: SQUARES,
 
 		/*
+			FROM arimaa.com
 			The order of checking for win/lose conditions is as follows assuming player A just made the move and player B now needs to move:
 			Check if a rabbit of player A reached goal. If so player A wins.
 			Check if a rabbit of player B reached goal. If so player B wins.
@@ -391,6 +559,14 @@ var Arimaa = function(options) {
 			return add_move(move);
 		},
 
+		add_step: function(stepString) {
+			return add_step(stepString);
+		},
+
+		complete_move: function() {
+			return complete_move();
+		},
+
 		is_game_over: function() {
 			return false;
 		},
@@ -405,31 +581,60 @@ var Arimaa = function(options) {
 			return generate_fen();
 		},
 
-		can_be_pushed: function(squareNum) {
+		get_move_list: function() {
+			return moveHistory;
+		},
+
+		get_move_list_string: function() {
+			return get_move_list_string();
+		},
+
+		can_be_pushed: function(square) {
+    	var squareNum = SQUARES[square];
 			return can_be_pushed(squareNum);
-		},	
+		},
 
+		//TEST THIS!!!!
 		get_turn_num: function() {
-      		return "1g";
-    	},
+			var c = halfmoveNumber % 2 ? 's' : 'g';
+			return Math.floor(halfmoveNumber/2) + c;
+    },
 
-    	generate_steps_for_piece_on_square: function(squareNum) {
+    generate_steps_for_piece_on_square: function(square) {
+    	var squareNum = SQUARES[square];
 			return generate_steps_for_piece_on_square(squareNum);
-    	},
+    },
 
-    	get_piece_on_square: function(squareNum) {
-    		return get_piece_on_square(squareNum);
-    	},
+    get_piece_on_square: function(square) {
+    	var squareNum = SQUARES[square];
+    	return get_piece_on_square(squareNum);
+    },
 
-    	ascii: function() {
-    		return ascii();
-    	},
+		square_name: function(squareNum) {
+			if(squareNum & 0x88) return "";
+			return square_name(squareNum);
+		},
 
-    	clear: function() {
-    		return null;
-    	},
+    ascii: function() {
+    	return ascii();
+    },
 
+    clear: function() {
+    	return null;
+    },
 
+    //DEBUGGING USE ONLY!!!!!!!!!!
+    log_locals: function() {
+    	console.log(board);
+    	console.log(fen);
+    	console.log(boardHistory);
+    	console.log(moveHistory);
+    	console.log(ongoingMove);
+    	console.log(halfmoveNumber);
+    	console.log(stepsLeft);
+    	console.log(colorToMove);
+    	console.log(inPush);
+    }
 	};
 };
 
