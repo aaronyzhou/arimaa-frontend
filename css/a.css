@@ -1,6 +1,12 @@
 body {
   background-color: #ddd; }
 
+footer {
+  bottom: 0;
+  width: 100%;
+  position: fixed;
+  text-align: center; }
+
 .animal {
   background: url("../images/animals_60x60.png") no-repeat top left;
   width: 80px;
