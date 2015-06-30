@@ -299,12 +299,12 @@ var Arimaa = function(options) {
 	}
 
 	//returns all possible steps from current position
-	//TODO: fill this out!!!
 	function generate_steps() {
 		var steps = [];
-		//for all piece on board
-		//  stepsForPiece = steps_for_piece(piece)
-		//  steps.append(stepsForPiece)
+		for(var square in SQUARES) {
+			var sqNum = SQUARES[square];
+			steps = steps.concat(generate_steps_for_piece_on_square(sqNum));
+		}
 		return steps;
 	}
 
@@ -322,7 +322,7 @@ var Arimaa = function(options) {
 		if(ongoingMove.length) {
 			var prevStep = ongoingMove[ongoingMove.length-1];
 			if(prevStep['push']) {
-				if(prevStep['square'] == squareNum+DIRECTIONS[direction] && 
+				if(prevStep['square'] == squareNum+DIRECTIONS[direction] &&
 					((piece & COLOR) >> 3) == colorToMove &&
 					(piece & DECOLOR) > (prevStep['piece'] & DECOLOR)) {
 					stepObj['completedPush'] = true;
@@ -386,47 +386,54 @@ var Arimaa = function(options) {
 		if(piece === EMPTY || stepsLeft === 0) {
 			return steps;
 		}
-		//should be called prevStep
+
 		var prevStep = null;
 		if(ongoingMove.length > 0) {
 			prevStep = ongoingMove[ongoingMove.length-1];
+			//ignore captures
+			if(prevStep.direction === 'x') {
+				prevStep = ongoingMove[ongoingMove.length-2];
+			}
+
 		}
+
+		var pieceName = PIECES.charAt(piece);
+		var location = square_name(squareNum);
 
 		//actually it might make more sense to add a 'push' object to a step object
 		if(prevStep != null && prevStep['push']) {
 			if(is_adjacent_to(squareNum, prevStep['square'])) {
 				if((piece & DECOLOR) > (prevStep['piece'] & DECOLOR)) {
-					steps.push({piece:piece,square:squareNum,direction:DIRECTIONS[prevStep['square']-squareNum]});//need a better way to get the dircetion
+					var dir = DIRECTIONS[prevStep['square']-squareNum];
+					steps.push({piece:piece,square:squareNum,direction:dir,string:pieceName+location+dir});//need a better way to get the dircetion
 				}
 			}
 			return steps;
 		}
 
-		//TODO: ADD STEP STRING TO STEP OBJ
-
 		//same color
 		if((piece & COLOR) >> 3 == colorToMove && !is_frozen(squareNum)) {
 			if ((((squareNum + DIRECTIONS.NORTH) & 0x88) === 0) && (board[squareNum+DIRECTIONS.NORTH] === EMPTY) && piece !== GRABBIT)
-				steps.push({piece:piece,square:squareNum,direction:'n'});
+				steps.push({piece:piece,square:squareNum,direction:'n',string:pieceName+location+'n'});
 			if ((((squareNum + DIRECTIONS.SOUTH) & 0x88) === 0) && (board[squareNum+DIRECTIONS.SOUTH] === EMPTY) && piece !== SRABBIT)
-				steps.push({piece:piece,square:squareNum,direction:'s'});
+				steps.push({piece:piece,square:squareNum,direction:'s',string:pieceName+location+'s'});
 			if ((((squareNum + DIRECTIONS.EAST) & 0x88) === 0) && (board[squareNum+DIRECTIONS.EAST] === EMPTY))
-				steps.push({piece:piece,square:squareNum,direction:'e'});
+				steps.push({piece:piece,square:squareNum,direction:'e',string:pieceName+location+'e'});
 			if ((((squareNum + DIRECTIONS.WEST) & 0x88) === 0) && (board[squareNum+DIRECTIONS.WEST] === EMPTY))
-				steps.push({piece:piece,square:squareNum,direction:'w'});
+				steps.push({piece:piece,square:squareNum,direction:'w',string:pieceName+location+'w'});
 		} else { //enemy piece
 			if(can_be_pushed(squareNum)) {
 				if ((((squareNum + DIRECTIONS.NORTH) & 0x88) === 0) && (board[squareNum+DIRECTIONS.NORTH] === EMPTY))
-					steps.push({piece:piece,square:squareNum,direction:'n'});
+					steps.push({piece:piece,square:squareNum,direction:'n',string:pieceName+location+'n'});
 				if ((((squareNum + DIRECTIONS.SOUTH) & 0x88) === 0) && (board[squareNum+DIRECTIONS.SOUTH] === EMPTY))
-					steps.push({piece:piece,square:squareNum,direction:'s'});
+					steps.push({piece:piece,square:squareNum,direction:'s',string:pieceName+location+'s'});
 				if ((((squareNum + DIRECTIONS.EAST) & 0x88) === 0) && (board[squareNum+DIRECTIONS.EAST] === EMPTY))
-					steps.push({piece:piece,square:squareNum,direction:'e'});
+					steps.push({piece:piece,square:squareNum,direction:'e',string:pieceName+location+'e'});
 				if ((((squareNum + DIRECTIONS.WEST) & 0x88) === 0) && (board[squareNum+DIRECTIONS.WEST] === EMPTY))
-					steps.push({piece:piece,square:squareNum,direction:'w'});
+					steps.push({piece:piece,square:squareNum,direction:'w',string:pieceName+location+'w'});
 			} else if(can_be_pulled(squareNum)) { //use else if to prevent adding duplicate step
 				var dir = DIRECTIONS[prevStep['square']-squareNum];
-				steps.push({piece:piece,square:squareNum,direction:dir});
+				steps.push({piece:piece,square:squareNum,direction:dir,string:pieceName+location+dir});
 			}
 		}
 		return steps;
@@ -629,7 +636,7 @@ var Arimaa = function(options) {
 
 		undo_ongoing_move: function() {
 			return undo_ongoing_move();
-		},	
+		},
 
 		redo_ongoing_move: function() {
 			return redo_ongoing_move();
@@ -670,6 +677,20 @@ var Arimaa = function(options) {
 		get_turn_num: function() {
 			var c = halfmoveNumber % 2 ? 's' : 'g';
 			return Math.floor(halfmoveNumber/2) + c;
+		},
+
+		generate_steps: function() {
+			return generate_steps();
+		},
+
+		generate_steps_strings: function() {
+			var stepStrings = [];
+			var steps = generate_steps();
+			for(var i=0;i<steps.length;i++) {
+				var step = steps[i];
+				stepStrings.push(step['string']);
+			}
+			return stepStrings;
 		},
 
 		generate_steps_for_piece_on_square: function(square) {
