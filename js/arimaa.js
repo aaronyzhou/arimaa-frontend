@@ -171,6 +171,7 @@ var Arimaa = function(options) {
 		halfmoveNumber += 1;
 
 		//check victory conds???
+		var victory = check_victory(); //???????????
 
 		return true;
 	}
@@ -296,6 +297,11 @@ var Arimaa = function(options) {
 		if(!is_adjacent_to(squareNum, prevSquare)) return false;
 		if((pullingPiece & DECOLOR) == (piece & DECOLOR)) return false; //this check could be better?
 		return (pullingPiece & DECOLOR) > (piece & DECOLOR);
+	}
+
+	//FILL THIS OUT!!!
+	function generate_moves() {
+		var moves = [];
 	}
 
 	//returns all possible steps from current position
@@ -536,21 +542,78 @@ var Arimaa = function(options) {
 	function is_goal() {
 		var gGoal = false;
 		for (var ix = 0x70; ix < 0x78; ix++) {
-			if (board[ix] == Piece.GRABBIT) { gGoal = true; break }
+			if (board[ix] == GRABBIT) { gGoal = true; break }
 		}
 		var sGoal = false;
 		for (var ix = 0; ix < 8; ix++) {
-			if (board[ix] == Piece.SRABBIT) { sGoal = true; break }
+			if (board[ix] == SRABBIT) { sGoal = true; break }
 		}
 		if (gGoal || sGoal) {
-			if (this.color == Color.GOLD) {
+			if (colorToMove == SILVER) { //reversed since we check at the beginning of each halfmove for the player who just completed the turn
 				if (sGoal) { return -1 } else { return 1 }
 			} else {
 				if (gGoal) { return 1 } else { return -1 }
 			}
 		} else {
-			return false;
+			return 0;
 		}
+	}
+
+	//TEST THIS TOO!!!
+	//also make it less ugly
+	function is_elimination() {
+		var myRabbitCount = 0;
+		var oppRabbitCount = 0;
+		for(var sq in SQUARES) {
+			var sqNum = SQUARES[sq];
+			var piece = get_piece_on_square(sqNum);
+			if(piece === GRABBIT) {
+				if(colorToMove === GOLD) {
+					oppRabbitCount++;
+				} else {
+					myRabbitCount++;
+				}
+			} else if(piece === SRABBIT) {
+				if(colorToMove === GOLD) {
+					myRabbitCount++;
+				} else {
+					oppRabbitCount++;
+				}
+			}
+		}
+		if(oppRabbitCount === 0) return 1;
+		if(myRabbitCount === 0) return -1;
+		return 0;
+	}
+
+	//only check for opponent
+	function is_immobilization() {
+		if(generate_steps().length == 0) return 1;
+		return 0;
+	}
+
+	//IMPLEMENT THIS AT SOME POINT!!!!!!!
+	function is_repetiton() {
+
+	}
+
+	//0 is no victory, 1 is victory, -1 is loss
+	//TODO: add victory type
+	function check_victory() {
+		var goal = is_goal();
+		if(goal !== 0) {
+			return {result:goal,type:'g'}
+		}
+		var elim = is_elimination();
+		if(elim !== 0) {
+			return {result:elim,type:'e'}
+		}
+		var imm = is_immobilization();
+		if(imm !== 0) {
+			return {result:imm,type:'i'}
+		}
+		//IMPLEMENT REPETITION CHECK!!!
+		return {result:0};
 	}
 
 	function get_piece_on_square(squareNum) {
