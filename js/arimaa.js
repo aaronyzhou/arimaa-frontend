@@ -90,7 +90,6 @@ var Arimaa = function(options) {
 	for(var i=0;i<128;i++) {board[i] = 0;}
 
 	parse_fen(fen);
-
 	var boardHistory = options['boardHistory'] || []; //nb empty array is truthy
 	var moveHistory = options['moveHistory'] || [];
 	var ongoingMove = options['ongoingMove'] || [];
@@ -126,7 +125,7 @@ var Arimaa = function(options) {
 		}
 
 		stepStack.push(prevStep); //we don't need to push the capture step since that will be automatically added once we redo a step that could lead to capture
-
+		stepsLeft += 1;
 		var currentSquare = prevStep['square'] + DIRECTIONS[prevStep['direction']];
 		remove_piece_from_square(currentSquare); //
 		place_piece(prevStep['piece'], prevStep['square']);
@@ -152,17 +151,8 @@ var Arimaa = function(options) {
 	//returns true if move can be completed
 	//reasons for false:position same, 3x repetition
 	function complete_move() {
-		var currentFen = generate_fen();
-		if(ongoingMove.length === 0) return false; //no move //we should add the starting position to move history and remove this check later
+		if(!can_complete_move()) return false;
 
-		if(boardHistory.length) {
-			if(currentFen === boardHistory[boardHistory.length-1]) return false; //no change
-		}
-		var count = 0;
-		for(var i=0;i<boardHistory.length;i++) {
-			if(currentFen == boardHistory[i]) count += 1;
-			if(count == 2) return false;
-		}
 		boardHistory.push(currentFen);
 		colorTo  = (colorToMove === GOLD) ? SILVER : GOLD;
 		stepsLeft = 4;
@@ -175,6 +165,22 @@ var Arimaa = function(options) {
 
 		return true;
 	}
+
+	function can_complete_move() {
+		var currentFen = generate_fen();
+		if(ongoingMove.length === 0) return false; //no move //we should add the starting position to move history and remove this check later
+
+		if(boardHistory.length) {
+			if(currentFen === boardHistory[boardHistory.length-1]) return false; //no change
+		}
+		var count = 0;
+		for(var i=0;i<boardHistory.length;i++) {
+			if(currentFen == boardHistory[i]) count += 1;
+			if(count == 2) return false;
+		}
+		return true;
+	}
+
 
 	//adds trap step to list of moves if any pieces trapped
 	//NEEDS TESTING!!!!!!
@@ -292,16 +298,40 @@ var Arimaa = function(options) {
 
 		if(prevStep['completedPush']) return false; //a piece that just pushed can't also pull
 
-		var prevSquare = prevSquare['square'];
-		var pullingPiece = prevSquare['piece'];
+		var prevSquare = prevStep['square'];
+		var pullingPiece = prevStep['piece'];
 		if(!is_adjacent_to(squareNum, prevSquare)) return false;
 		if((pullingPiece & DECOLOR) == (piece & DECOLOR)) return false; //this check could be better?
 		return (pullingPiece & DECOLOR) > (piece & DECOLOR);
 	}
 
-	//FILL THIS OUT!!!
+	//NEEDS SO MUCH TESTING!!!!!
 	function generate_moves() {
 		var moves = [];
+		var uniquePositions = {};
+
+		function dls(depth) {
+			if(depth === 0) return;
+			var stack = generate_steps();
+			for(var i=0;i<stack.length;i++) {
+				var s = stack[i]['string'];
+				var a = add_step(s);
+				if(!a) {  //We should remove this later since this should never happen
+					console.log("/???");
+					console.log(ascii());
+					console.log(s)
+					console.log('=========')
+				}
+				if(can_complete_move()) {
+					moves.push(ongoingMove.slice());
+				}
+				dls(depth-1);
+				undo_step();
+			}
+		}
+
+		dls(stepsLeft);
+		return moves;
 	}
 
 	//returns all possible steps from current position
@@ -324,6 +354,9 @@ var Arimaa = function(options) {
 		var direction = stepString.charAt(3);
 		var squareNum = SQUARES[location];
 		var stepObj = {piece:piece,square:squareNum,direction:direction,string:stepString};
+
+		if(piece === GRABBIT && direction === 's') return false;
+		if(piece === SRABBIT && direction === 'n') return false;
 
 		if(ongoingMove.length) {
 			var prevStep = ongoingMove[ongoingMove.length-1];
@@ -419,9 +452,9 @@ var Arimaa = function(options) {
 
 		//same color
 		if((piece & COLOR) >> 3 == colorToMove && !is_frozen(squareNum)) {
-			if ((((squareNum + DIRECTIONS.NORTH) & 0x88) === 0) && (board[squareNum+DIRECTIONS.NORTH] === EMPTY) && piece !== GRABBIT)
+			if ((((squareNum + DIRECTIONS.NORTH) & 0x88) === 0) && (board[squareNum+DIRECTIONS.NORTH] === EMPTY) && piece !== SRABBIT)
 				steps.push({piece:piece,square:squareNum,direction:'n',string:pieceName+location+'n'});
-			if ((((squareNum + DIRECTIONS.SOUTH) & 0x88) === 0) && (board[squareNum+DIRECTIONS.SOUTH] === EMPTY) && piece !== SRABBIT)
+			if ((((squareNum + DIRECTIONS.SOUTH) & 0x88) === 0) && (board[squareNum+DIRECTIONS.SOUTH] === EMPTY) && piece !== GRABBIT)
 				steps.push({piece:piece,square:squareNum,direction:'s',string:pieceName+location+'s'});
 			if ((((squareNum + DIRECTIONS.EAST) & 0x88) === 0) && (board[squareNum+DIRECTIONS.EAST] === EMPTY))
 				steps.push({piece:piece,square:squareNum,direction:'e',string:pieceName+location+'e'});
@@ -742,6 +775,26 @@ var Arimaa = function(options) {
 			return Math.floor(halfmoveNumber/2) + c;
 		},
 
+		generate_moves: function() {
+			return generate_moves();
+		},
+
+		generate_moves_strings: function() {
+			var moves = generate_moves();
+			var moveStrings = [];
+			for(var i=0;i<moves.length;i++) {
+				var move = moves[i];
+				//console.log(move);
+				var current_move_string = [];
+				for(var j=0;j<move.length;j++) {
+					var s = move[j];
+					current_move_string.push(s['string'])
+				}
+				moveStrings.push(current_move_string);
+			}
+			return moveStrings;
+		},
+
 		generate_steps: function() {
 			return generate_steps();
 		},
@@ -796,11 +849,8 @@ var Arimaa = function(options) {
 	};
 };
 
-
 if (typeof exports !== 'undefined') exports.Arimaa = Arimaa;
-/* export Chess object for any RequireJS compatible environment */
 if (typeof define !== 'undefined') define( function () { return Arimaa;  });
-
 
 
 /*
