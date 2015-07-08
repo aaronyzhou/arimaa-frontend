@@ -1,3 +1,5 @@
+var React = require('./lib/react.js');
+
 function numberToPieceClass(n) {
   switch(n) {
     case 1:
@@ -29,11 +31,10 @@ function numberToPieceClass(n) {
   }
 }
 
-var ArimaaGame = React.createClass({displayName: "ArimaaGame",
+var Board = React.createClass({
   render: function() {
     var message = 'hi';
     var rows = [];
-
     var ranks = "87654321";
     var files = "abcdefgh";
 
@@ -47,15 +48,12 @@ var ArimaaGame = React.createClass({displayName: "ArimaaGame",
         var sqColor = ((i+j)%2) ? "bl" : "wh";
         var c = sqColor + " " + pieceClassName;
 
-        sqs.push(React.createElement("div", {className: c, key: squareName}));
+        sqs.push(<div className={c} key={squareName}></div>);
       }
-      rows.push(React.createElement("div", {className: "row", key: i}, sqs));
+      rows.push(<div className="row" key={i}>{sqs}</div>);
     }
-    return React.createElement("div", {id: "board"}, rows);
+    return <div id="board">{rows}</div>;
   }
 });
 
-
-var arimaa = new Arimaa();
-arimaa.set_position("3/8/3R4/3r4/8/8/8/8");
-React.render(React.createElement(ArimaaGame, {arimaa: arimaa}), document.getElementById('board_container'));
+module.exports = Board;

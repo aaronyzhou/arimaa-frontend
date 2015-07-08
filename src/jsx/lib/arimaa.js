@@ -849,33 +849,4 @@ var Arimaa = function(options) {
 	};
 };
 
-if (typeof exports !== 'undefined') exports.Arimaa = Arimaa;
-if (typeof define !== 'undefined') define( function () { return Arimaa;  });
-
-
-/*
-
-use these later?
-
-var ArimaaPiece = function(weight, color, location) {
-	function isHeavierThan(other) {
-		return weight > other['weight'];
-	}
-
-	return {weight:weight, color:color, location:location};
-}
-
-//E e4 n, + flags for push/pull
-var ArimaaStep = function(piece, from, direction, special) {
-	return {piece:piece, from:from, direction:direction, special:special};
-}
-
-var DIRECTIONS = {
-	'n':-16,
-	's':16,
-	'e':1,
-	'w':-1
-}
-
-
-*/
+module.exports = Arimaa;

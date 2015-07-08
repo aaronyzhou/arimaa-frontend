@@ -1,3 +1,5 @@
+//OLD CLIENT
+
 document.addEventListener("DOMContentLoaded", startGame, false);
 //document.addEventListener("keydown", doKeyDown, true);
 var tiles = new Image();

@@ -3,3 +3,5 @@
 .sass-cache/*
 .module-cache/
 .module-cache/*
+node_modules/
+node_modules/*
