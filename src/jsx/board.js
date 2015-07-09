@@ -33,7 +33,6 @@ function numberToPieceClass(n) {
 
 var Board = React.createClass({
   render: function() {
-    var message = 'hi';
     var rows = [];
     var ranks = "87654321";
     var files = "abcdefgh";

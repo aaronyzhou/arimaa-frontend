@@ -1,5 +1,4 @@
 var gulp = require('gulp');
-var react = require('gulp-react');
 var sass = require('gulp-sass');
 var jade = require('gulp-jade');
 var watchify = require('watchify');
@@ -10,13 +9,11 @@ var uglify = require('gulp-uglify');
 var source = require('vinyl-source-stream');
 var minifer = require('gulp-uglify/minifier');
 var uglifyjs = require('uglify-js');
+var es = require('event-stream');
+var rename = require('gulp-rename');
 
 var path = {
-  JS:['src/jsx/*.js'], //no longer needed??
-
-  JS_OUT:'dist/js',
   MINIFIED_OUT: 'build.min.js',
-
 
   SCSS:'src/scss/*.scss',
   SCSS_PATH:'src/scss',
@@ -29,7 +26,12 @@ var path = {
   DEST_BUILD:'dist/build',
 
 
-  ENTRY_POINT: ['./src/jsx/app.js']
+  ENTRY_POINT: ['./src/jsx/app.js'],
+
+  JS: './src/jsx/*.js',
+  JS_PATH: './src/jsx/',
+  ENTRIES: ['app.js'],
+  JS_OUT:'dist/js'
 }
 
 gulp.task('scss', function() {
@@ -51,11 +53,43 @@ gulp.task('jade', function() {
     .pipe(gulp.dest(path.HTML_OUT));
 });
 
+
+gulp.task("js", function() {
+  var tasks = path.ENTRIES.map(function(entry) {
+      return browserify({
+        entries: [path.JS_PATH + entry],
+        transform: [reactify]
+      })
+        .bundle()
+        .pipe(source(entry))
+        .pipe(gulp.dest(path.DEST_BUILD));
+      });
+  return es.merge.apply(null, tasks);
+});
+
+gulp.task('build', function() {
+    var tasks = path.ENTRIES.map(function(entry) {
+        return browserify({
+          entries: [path.JS_PATH + entry],
+          transform: [reactify]
+        })
+          .bundle()
+          .pipe(source(entry))
+          .pipe(streamify(minifer({}, uglifyjs)))
+          .pipe(rename({
+                extname: '.min.js'
+          }))
+          .pipe(gulp.dest(path.DEST_BUILD));
+        });
+    return es.merge.apply(null, tasks);
+});
+
 gulp.task('watch', function() {
-  gulp.watch(path.JS, []);
+  gulp.watch(path.JS, ['js']);
   gulp.watch(path.SCSS, ['scss']);
   gulp.watch(path.JADE, ['jade']);
 
+  /*
   var watcher = watchify(browserify({
     entries: path.ENTRY_POINT,
     transform:[reactify],
@@ -71,16 +105,8 @@ gulp.task('watch', function() {
   }).bundle()
     .pipe(source(path.OUT))
     .pipe(gulp.dest(path.JS_OUT));
+  */
+
 });
 
-gulp.task('build', function(){
-  browserify({
-    entries: path.ENTRY_POINT,
-    transform: [reactify],
-  })
-    .bundle()
-    .pipe(source(path.MINIFIED_OUT))
-    //.pipe(streamify(uglify(path.MINIFIED_OUT)))
-    .pipe(streamify(minifer({}, uglifyjs))) //https://github.com/terinjokes/gulp-uglify/issues/98
-    .pipe(gulp.dest(path.DEST_BUILD));
-});
+gulp.task('default', ['watch']);
