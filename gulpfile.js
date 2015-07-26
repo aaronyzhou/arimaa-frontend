@@ -1,3 +1,5 @@
+'use strict';
+require('ofe').call();
 var gulp = require('gulp');
 var sass = require('gulp-sass');
 var jade = require('gulp-jade');
@@ -13,7 +15,13 @@ var es = require('event-stream');
 var rename = require('gulp-rename');
 
 var path = {
-  MINIFIED_OUT: 'build.min.js',
+  JS: './src/jsx/*.js',
+  JS_PATH: './src/jsx/',
+  ENTRIES: ['app.js','chat.js'],
+  ENTRY_APP: 'app.js',
+  ENTRY_CHAT: 'chat.js',
+
+  JS_OUT:'dist/js',
 
   SCSS:'src/scss/*.scss',
   SCSS_PATH:'src/scss',
@@ -21,17 +29,36 @@ var path = {
   JADE:'src/jade/views/*.jade',
   HTML_OUT:'dist/html',
 
-  OUT: 'build.js',
   DEST:'dist',
-  DEST_BUILD:'dist/build',
+  DEST_BUILD:'dist/build'
+}
 
+function onError(e) {
+  var s = "";
+  s += "descr: " + e.description + "\n";
+  s += "line: "  + e.lineNumber + "\n";
+  console.log(s);
+  if(!e.description) {
+    console.log(e);
+  }
+  this.emit("end");
+}
 
-  ENTRY_POINT: ['./src/jsx/app.js'],
-
-  JS: './src/jsx/*.js',
-  JS_PATH: './src/jsx/',
-  ENTRIES: ['app.js'],
-  JS_OUT:'dist/js'
+//based on https://gist.github.com/Sigmus/9253068
+function buildScript(filename, watch) {
+  var props = {entries: [path.JS_PATH + filename],cache: {}, packageCache: {}, debug:true};
+  var bundler = watch ? watchify(browserify(props)) : browserify(props);
+  bundler.transform(reactify);
+  function rebundle() {
+    var stream = bundler.bundle();
+    return stream.on('error', onError)
+    .pipe(source(filename))
+    .pipe(gulp.dest(path.JS_OUT));
+  }
+  bundler.on('update', function() {
+    rebundle();
+  });
+  return rebundle();
 }
 
 gulp.task('scss', function() {
@@ -41,7 +68,7 @@ gulp.task('scss', function() {
         includePaths: [path.SCSS_PATH],
         errLogToConsole: true
       }))
-    /*.pipe( csso() )*/ //minimizer
+    //.pipe( csso() ) //minimizer
     .pipe(gulp.dest(path.CSS_OUT));
 });
 
@@ -53,18 +80,33 @@ gulp.task('jade', function() {
     .pipe(gulp.dest(path.HTML_OUT));
 });
 
-
 gulp.task("js", function() {
   var tasks = path.ENTRIES.map(function(entry) {
       return browserify({
         entries: [path.JS_PATH + entry],
-        transform: [reactify]
+        transform: [reactify],
       })
-        .bundle()
+        .bundle().on('error', onError)
         .pipe(source(entry))
-        .pipe(gulp.dest(path.DEST_BUILD));
+        .pipe(gulp.dest(path.DEST_BUILD)  );
       });
   return es.merge.apply(null, tasks);
+});
+
+gulp.task("js-app", function() {
+  return buildScript(path.ENTRY_APP, false);
+});
+
+gulp.task("js-chat", function() {
+  return buildScript(path.ENTRY_CHAT, false);
+});
+
+gulp.task("watch-app", function() {
+  return buildScript(path.ENTRY_APP, true);
+});
+
+gulp.task("watch-chat", function() {
+  return buildScript(path.ENTRY_CHAT, true);
 });
 
 gulp.task('build', function() {
@@ -83,30 +125,11 @@ gulp.task('build', function() {
         });
     return es.merge.apply(null, tasks);
 });
-
+ 
 gulp.task('watch', function() {
   gulp.watch(path.JS, ['js']);
   gulp.watch(path.SCSS, ['scss']);
   gulp.watch(path.JADE, ['jade']);
-
-  /*
-  var watcher = watchify(browserify({
-    entries: path.ENTRY_POINT,
-    transform:[reactify],
-    debug: true,
-    cache: {}, packageCache: {}, fullPaths:true
-  }));
-
-  return watcher.on('update', function() {
-    watcher.bundle()
-      .pipe(source(path.OUT))
-      .pipe(gulp.dest(path.DEST_SRC));
-      //console.log('updated');
-  }).bundle()
-    .pipe(source(path.OUT))
-    .pipe(gulp.dest(path.JS_OUT));
-  */
-
 });
 
 gulp.task('default', ['watch']);

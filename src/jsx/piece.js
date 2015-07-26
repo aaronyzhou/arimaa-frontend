@@ -1,14 +1,4 @@
-var BlackElephant = React.createClass({
-  render: function () {
-    return <img src="../images/be.gif" alt="be"></img>;
-  }
-});
-
-var WhiteElephant = React.createClass({
-  render: function () {
-    return <img src="../images/we.gif" alt="be"></img>;
-  }
-});
+var React = require('react');
 
 var ArimaaPiece = React.createClass({
   render: function() {

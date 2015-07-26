@@ -1,57 +1,82 @@
-var React = require('./lib/react.js');
+var React = require('react');
+var Arimaa = require('./lib/arimaa.js');
+var Square = require('./square.js');
+var Piece = require('./piece.js');
 
-function numberToPieceClass(n) {
+function numberToPieceName(n) {
   switch(n) {
     case 1:
-      return "animal GoldRabbit";
+      return "wr";
     case 2:
-      return "animal GoldCat";
+      return "wc";
     case 3:
-      return "animal GoldDog";
+      return "wd";
     case 4:
-      return "animal GoldHorse";
+      return "wh";
     case 5:
-      return "animal GoldCamel";
+      return "wm";
     case 6:
-      return "animal GoldElephant";
+      return "we";
     case 9:
-      return "animal SilverRabbit";
+      return "br";
     case 10:
-      return "animal SilverCat";
+      return "bc";
     case 11:
-      return "animal SilverDog";
+      return "bd";
     case 12:
-      return "animal SilverHorse";
+      return "bh";
     case 13:
-      return "animal SilverCamel";
+      return "bm";
     case 14:
-      return "animal SilverElephant";
+      return "be";
     default:
       return "";
   }
 }
 
+
 var Board = React.createClass({
-  render: function() {
-    var rows = [];
+  getInitialState: function() {
+    var a = new Arimaa();
+    a.set_position("8/8/3R4/3r4/8/8/8/8");
+    return {arimaa: a};
+  },
+
+  renderSquare: function(i) {
+    var x = i%8;
+    var y = Math.floor(i/8);
+
     var ranks = "87654321";
     var files = "abcdefgh";
+    var squareName =  files.charAt(x)+ranks.charAt(y);
+    var piece = this.state.arimaa.get_piece_on_square(squareName);
 
-    for(var i=0;i<8;i++) {
-      var sqs = [];
-      for(var j=0;j<8;j++) {
-        var squareName =  files.charAt(j)+ranks.charAt(i);
-        var sqNum = 16*i+j;
-        var piece = this.props.arimaa.get_piece_on_square(squareName);
-        var pieceClassName = numberToPieceClass(piece);
-        var sqColor = ((i+j)%2) ? "bl" : "wh";
-        var c = sqColor + " " + pieceClassName;
+    var pieceName = numberToPieceName(piece);
+    var p = pieceName != "" ? <Piece pieceName={pieceName}></Piece> : null
 
-        sqs.push(<div className={c} key={squareName}></div>);
-      }
-      rows.push(<div className="row" key={i}>{sqs}</div>);
+    var black = (x+y) % 2 === 1;
+    var trap = (x === 2 || x === 5) && (y === 2 || y === 5);
+
+    return (
+      <div key={i} style={{width:'12.5%', height:'12.5%'}}>
+        <Square black={black} trap={trap}>
+          {p}
+        </Square>
+      </div>
+    );
+  },
+
+  render: function() {
+    var squares = [];
+    for(var i=0;i<64;i++) {
+      squares.push(this.renderSquare(i));
     }
-    return <div id="board">{rows}</div>;
+
+    return (
+      <div style={{width:'100%',height:'100%',display:'flex',flexWrap:'wrap'}}>
+        {squares}
+      </div>
+    );
   }
 });
 
