@@ -1,5 +1,10 @@
+$maintheme : #000000;
+
+$darksquare : #fff !default;
+$lightsquare : #fff !default;
+
 body {
-  background-color: #eee;
+  background-color: #000;
 }
 
 footer {
@@ -63,8 +68,7 @@ body {
 }
 
 #board_container {
-  width: 480px;
-  height: 480px;
+  background-color: #000;
 }
 
 #board {

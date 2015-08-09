@@ -13,9 +13,10 @@ var minifer = require('gulp-uglify/minifier');
 var uglifyjs = require('uglify-js');
 var es = require('event-stream');
 var rename = require('gulp-rename');
+var browserSync = require('browser-sync');
 
 var path = {
-  JS: './src/jsx/*.js',
+  JS: './src/jsx/**/*.js',
   JS_PATH: './src/jsx/',
   ENTRIES: ['app.js','chat.js'],
   ENTRY_APP: 'app.js',
@@ -26,7 +27,7 @@ var path = {
   SCSS:'src/scss/*.scss',
   SCSS_PATH:'src/scss',
   CSS_OUT:'dist/css',
-  JADE:'src/jade/views/*.jade',
+  JADE:'src/jade/**/*.jade',
   HTML_OUT:'dist/html',
 
   DEST:'dist',
@@ -35,12 +36,18 @@ var path = {
 
 function onError(e) {
   var s = "";
+  s += "file: " + e.fileName + "\n";
   s += "descr: " + e.description + "\n";
   s += "line: "  + e.lineNumber + "\n";
   console.log(s);
   if(!e.description) {
     console.log(e);
   }
+  this.emit("end");
+}
+
+function onScssError(e) {
+  sass.logError(e);
   this.emit("end");
 }
 
@@ -53,21 +60,18 @@ function buildScript(filename, watch) {
     var stream = bundler.bundle();
     return stream.on('error', onError)
     .pipe(source(filename))
-    .pipe(gulp.dest(path.JS_OUT));
+    .pipe(gulp.dest(path.DEST_BUILD));
   }
   bundler.on('update', function() {
     rebundle();
+    console.log('update');
   });
   return rebundle();
 }
 
 gulp.task('scss', function() {
   return gulp.src(path.SCSS)
-    .pipe(
-      sass({
-        includePaths: [path.SCSS_PATH],
-        errLogToConsole: true
-      }))
+    .pipe(sass().on('error', sass.logError))
     //.pipe( csso() ) //minimizer
     .pipe(gulp.dest(path.CSS_OUT));
 });
@@ -110,24 +114,41 @@ gulp.task("watch-chat", function() {
 });
 
 gulp.task('build', function() {
-    var tasks = path.ENTRIES.map(function(entry) {
-        return browserify({
-          entries: [path.JS_PATH + entry],
-          transform: [reactify]
-        })
-          .bundle()
-          .pipe(source(entry))
-          .pipe(streamify(minifer({}, uglifyjs)))
-          .pipe(rename({
-                extname: '.min.js'
-          }))
-          .pipe(gulp.dest(path.DEST_BUILD));
-        });
-    return es.merge.apply(null, tasks);
+  var tasks = path.ENTRIES.map(function(entry) {
+      return browserify({
+        entries: [path.JS_PATH + entry],
+        transform: [reactify]
+      })
+      .bundle()
+      .pipe(source(entry))
+      .pipe(streamify(minifer({}, uglifyjs)))
+      .pipe(rename({
+            extname: '.min.js'
+      }))
+      .pipe(gulp.dest(path.DEST_BUILD));
+  });
+  return es.merge.apply(null, tasks);
 });
- 
+
+//wait for preprecssing to finish then reload
+gulp.task('js-app-browsersync', ['js-app'], browserSync.reload);
+gulp.task('scss-browsersync', ['scss'], browserSync.reload);
+gulp.task('jade-browsersync', ['jade'], browserSync.reload);
+
+gulp.task('serve', ['js-app','jade','scss'], function() {
+  browserSync({
+     server: {
+       baseDir: "./"
+     }
+  });
+  gulp.watch(path.JS, ['js-app-browsersync']);
+  gulp.watch(path.SCSS, ['scss-browsersync']);
+  gulp.watch(path.JADE, ['jade-browsersync']);
+});
+
+//no longer needed?
 gulp.task('watch', function() {
-  gulp.watch(path.JS, ['js']);
+  gulp.watch(path.JS, ['js-app']);
   gulp.watch(path.SCSS, ['scss']);
   gulp.watch(path.JADE, ['jade']);
 });

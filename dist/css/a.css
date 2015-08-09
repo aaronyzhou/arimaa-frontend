@@ -1,5 +1,5 @@
 body {
-  background-color: #eee; }
+  background-color: #000; }
 
 footer {
   bottom: 0;
@@ -82,8 +82,7 @@ body {
   width: 1068px; }
 
 #board_container {
-  width: 480px;
-  height: 480px; }
+  background-color: #000; }
 
 #board {
   float: left;

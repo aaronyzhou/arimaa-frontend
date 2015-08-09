@@ -1,0 +1,18 @@
+$silver : #A6DED9 !default;
+$gold : #DED9A6 !default;
+
+$highlight: #8b9ae0 !default;
+$selection: #8b9ae0 !default;
+
+$dark-square : #000 !default;
+$light-square : #fff !default;
+$selected-dark-square : #009 !default;
+$selected-light-square : #00f !default;
+$light-trap : #f00 !default;
+$dark-trap : #f00 !default;
+
+$board-bg : "../images/grey.jpg" !default;
+$board-size : 480px !default;
+
+
+@import 'board'
