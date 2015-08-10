@@ -27,6 +27,10 @@ var ArimaaActions = {
     ArimaaDispatcher.dispatch({
       actionType: ArimaaConstants.ACTIONS.GAME_COMPLETE_MOVE
     });
+  },
+
+  viewPrevBoardState: function(plyNum) {
+
   }
 
 };

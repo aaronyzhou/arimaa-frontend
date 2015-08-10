@@ -90,7 +90,7 @@ const ArimaaStore = Object.assign({}, EventEmitter.prototype, {
           if(stepToAdd) {
             var k = _arimaa.add_step(stepToAdd.string);
             _redoSquareStack = []; //can't redo after adding a new step
-            console.log(k);
+            //console.log(k);
             //USE if_empty function after updating arimaajs!!!!
             //used if we move into a trap
             if(!_arimaa.is_empty(stepToAdd.destSquare)) {
@@ -154,8 +154,8 @@ const ArimaaStore = Object.assign({}, EventEmitter.prototype, {
 });
 
 function setInitialState() {
-  _arimaa = new Arimaa();
-  _arimaa.set_position("8/8/3CR3/3r4/8/8/8/8");
+  _arimaa = new Arimaa({fen:"8/8/3CR3/3r4/8/8/8/8"});
+  //
   _arimaa.add_step("Cd6n");
   _arimaa.complete_move();
 }

@@ -8,5 +8,5 @@ var Header = require('./components/header.js');
 var Login = require('./components/login.js');
 
 
-React.render(<Game/>, document.getElementById('board_container'));
+React.render(<Login/>, document.getElementById('board_container'));
 //React.render(<Header/>, document.getElementById('board_container'));

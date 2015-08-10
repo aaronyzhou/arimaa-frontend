@@ -90,7 +90,9 @@ var Arimaa = function(options) {
 	for(var i=0;i<128;i++) {board[i] = 0;}
 
 	parse_fen(fen);
-	var boardHistory = options['boardHistory'] || []; //nb empty array is truthy
+	//is it really neccessary to have board history be an option?
+	//maybe just have movehistory and calculate boardhistory by playing through the game??
+	var boardHistory = options['boardHistory'] || [fen]; //nb empty array is truthy
 	var moveHistory = options['moveHistory'] || [];
 	var ongoingMove = options['ongoingMove'] || [];
 	var halfmoveNumber = options['halfmoveNumber'] || 1;
@@ -99,6 +101,8 @@ var Arimaa = function(options) {
 	//need to do this since 0 is falsey
 	//though we probably never need to consider starting a position
 	//where the player has 0 steps left
+
+	//maybe we should just calculate this using the 4-ongoingMove.length
 	var stepsLeft = 4;
 	if(options['stepsLeft'] != undefined) {
 		stepsLeft = options['stepsLeft'];
@@ -106,14 +110,12 @@ var Arimaa = function(options) {
 
 	var stepStack = []; //used for undoing/redoing steps
 
-
 	//make this public? don't know how useful
 	function square_name(sqNum) {
 		var x = (8-Math.floor(sqNum / 16)).toString();
 		var y = sqNum % 8;
 		return "abcdefgh".charAt(y) + x;
 	}
-
 
 	//more information than you ever will want
 	//make this more object oriented-y later and add better special options support
@@ -167,7 +169,8 @@ var Arimaa = function(options) {
 	//returns true if move can be completed
 	//reasons for false:position same, 3x repetition
 	function complete_move() {
-		if(!can_complete_move()) return false;
+		var canComplete = can_complete_move();
+		if(!canComplete.success) return canComplete;
 
 		var currentFen = generate_fen();
 		boardHistory.push(currentFen);
@@ -179,25 +182,26 @@ var Arimaa = function(options) {
 
 		//check victory conds???
 		var victory = check_victory(); //???????????
-
-		return true;
+		return {success: true, victory: victory};
 	}
 
 	function can_complete_move() {
 		var currentFen = generate_fen();
-		if(ongoingMove.length === 0) return false; //no move //we should add the starting position to move history and remove this check later
+
+		//no move //we should add the starting position to move history and remove this check later
+		//ive added the starting position, remove the following line later and TEST
+		if(ongoingMove.length === 0) return {sucess: false, reason: "No steps taken"};
 
 		if(boardHistory.length) {
-			if(currentFen === boardHistory[boardHistory.length-1]) return false; //no change
+			if(currentFen === boardHistory[boardHistory.length-1]) return {success: false, reason: "Position hasn't changed"}; //no change
 		}
 		var count = 0;
 		for(var i=0;i<boardHistory.length;i++) {
 			if(currentFen == boardHistory[i]) count += 1;
-			if(count == 2) return false;
+			if(count == 2) return {success: false, reason: "Three times repetition"};
 		}
-		return true;
+		return {success:true};
 	}
-
 
 	//adds trap step to list of moves if any pieces trapped
 	//NEEDS TESTING!!!!!!
@@ -231,11 +235,13 @@ var Arimaa = function(options) {
 
 		for(var i=0;i<move.length;i++) {
 			step = move[i];
-			if(!add_step(step)) isValid = false;
+			if(!add_step(step).success) isValid = false;
 		}
 
 		if(!isValid) {
-			//ADD CODE TO UNDO MOVE!!!!
+			for(var i=0;i<move.length;i++) {
+				undo_step(); //undoing more steps than added is safe
+			}
 			return false;
 		}
 		return true;
@@ -776,14 +782,19 @@ var Arimaa = function(options) {
 			return complete_move();
 		},
 
-		is_game_over: function() {
-			return false;
+		//note: currently, you can add more steps after victory,
+		//which allows you to un-win
+		get_victory: function() {
+			return get_victory();
 		},
 
 		//probably should rename one of these functions
+		//don't use this anymore, set position in options
+		/*
 		set_position: function(fen) {
 			return parse_fen(fen);
-		},
+		},*/
+
 
 		//probably rename this later too
 		get_fen: function() {

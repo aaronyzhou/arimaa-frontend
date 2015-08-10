@@ -35,12 +35,13 @@
   background-size: 100%;
   display: flex;
   flex-wrap: wrap;
+  float: left;
 }
 
 table.moveList {
     /*display: table;*/
     height: 360px;
-    width: 100%;
+    width: 270px;
 }
 table.moveList thead, table.moveList tbody {
 	float: left;
