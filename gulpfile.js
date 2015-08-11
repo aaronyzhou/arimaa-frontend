@@ -27,7 +27,8 @@ var path = {
   SCSS:'src/scss/*.scss',
   SCSS_PATH:'src/scss',
   CSS_OUT:'dist/css',
-  JADE:'src/jade/**/*.jade',
+  JADE_WATCH: 'src/jade/**/*.jade',  //watch to see if layouts change
+  JADE_VIEWS:'src/jade/views/*.jade', //but only compile views so we won't create empty layout htmls
   HTML_OUT:'dist/html',
 
   DEST:'dist',
@@ -89,9 +90,10 @@ gulp.task('scss', function() {
 });
 
 gulp.task('jade', function() {
-  return gulp.src(path.JADE)
+  return gulp.src(path.JADE_VIEWS)
     .pipe(jade({
-      pretty: true
+      pretty: true,
+      locals: {env:process.env.NODE_ENV}
     }))
     .pipe(gulp.dest(path.HTML_OUT));
 });
@@ -173,14 +175,14 @@ gulp.task('serve', ['js-app','jade','scss'], function() {
   });
   gulp.watch(path.JS, ['js-app-browsersync']);
   gulp.watch(path.SCSS, ['scss-browsersync']);
-  gulp.watch(path.JADE, ['jade-browsersync']);
+  gulp.watch(path.JADE_WATCH, ['jade-browsersync']);
 });
 
 //no longer needed?
 gulp.task('watch', function() {
   gulp.watch(path.JS, ['js-app']);
   gulp.watch(path.SCSS, ['scss']);
-  gulp.watch(path.JADE, ['jade']);
+  gulp.watch(path.JADE_WATCH, ['jade']);
 });
 
 gulp.task('default', ['watch']);
