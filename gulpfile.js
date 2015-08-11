@@ -52,15 +52,27 @@ function onScssError(e) {
 }
 
 //based on https://gist.github.com/Sigmus/9253068
-function buildScript(filename, watch) {
+function buildScript(filename, watch, minimize) {
   var props = {entries: [path.JS_PATH + filename],cache: {}, packageCache: {}, debug:true};
   var bundler = watch ? watchify(browserify(props)) : browserify(props);
   bundler.transform(reactify);
   function rebundle() {
     var stream = bundler.bundle();
-    return stream.on('error', onError)
-    .pipe(source(filename))
-    .pipe(gulp.dest(path.DEST_BUILD));
+
+    //there might be a way to pipe conditionally
+    if(minimize) {
+      return stream.on('error', onError)
+      .pipe(source(filename))
+      .pipe(streamify(minifer({}, uglifyjs)))
+      .pipe(rename({
+            extname: '.min.js'
+      }))
+      .pipe(gulp.dest(path.DEST_BUILD));
+    } else {
+      return stream.on('error', onError)
+      .pipe(source(filename))
+      .pipe(gulp.dest(path.DEST_BUILD));
+    }
   }
   bundler.on('update', function() {
     rebundle();
@@ -84,6 +96,7 @@ gulp.task('jade', function() {
     .pipe(gulp.dest(path.HTML_OUT));
 });
 
+//REMOVE
 gulp.task("js", function() {
   var tasks = path.ENTRIES.map(function(entry) {
       return browserify({
@@ -98,22 +111,38 @@ gulp.task("js", function() {
 });
 
 gulp.task("js-app", function() {
-  return buildScript(path.ENTRY_APP, false);
+  return buildScript(path.ENTRY_APP, false, false);
 });
 
 gulp.task("js-chat", function() {
-  return buildScript(path.ENTRY_CHAT, false);
+  return buildScript(path.ENTRY_CHAT, false, false);
 });
 
 gulp.task("watch-app", function() {
-  return buildScript(path.ENTRY_APP, true);
+  return buildScript(path.ENTRY_APP, true, false);
 });
 
 gulp.task("watch-chat", function() {
-  return buildScript(path.ENTRY_CHAT, true);
+  return buildScript(path.ENTRY_CHAT, true, false);
 });
 
-gulp.task('build', function() {
+gulp.task("js-app-min", function() {
+  return buildScript(path.ENTRY_APP, false, true);
+});
+
+gulp.task("set-prod-env", function() {
+  return process.env.NODE_ENV = 'production';
+})
+
+//i think there
+gulp.task('build', ['set-prod-env','js-app-min','jade','scss'], function(){
+  console.log("build done");
+})
+
+//don't use this, remove later
+gulp.task('build-old', function() {
+  process.env.NODE_ENV = 'production';
+
   var tasks = path.ENTRIES.map(function(entry) {
       return browserify({
         entries: [path.JS_PATH + entry],
@@ -127,6 +156,7 @@ gulp.task('build', function() {
       }))
       .pipe(gulp.dest(path.DEST_BUILD));
   });
+
   return es.merge.apply(null, tasks);
 });
 

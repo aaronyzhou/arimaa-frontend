@@ -6,8 +6,17 @@ function POST(url, data, success, error) {
     url: url,
     contentType: 'application/json; charset=utf-8',
     data: JSON.stringify(data),
-    success: success,
-    error: error
+    success: function(data, textStatus, xhr) {
+      console.log(data);
+      success(data);
+    },
+    error: function(xhr, textStatus, err) {
+      if(xhr.status === 400) {
+        //authentication fail
+        console.log('auth fail');
+        //logout();
+      }
+    }
   });
 }
 
@@ -17,11 +26,15 @@ function GET(url, data, success, error) {
 
 
 var APIUtils = {
-  bot_register_request: function(username, email, password) {
+  register_bot: function(username, email, password) {
     //NOT YET IMPLEMENTED!
   },
 
-  register_request: function(username, email, password) {
+  login: function(username, password, success, error) {
+    POST('api/accounts/login', {username:username, password:password}, success, error);
+  },
+
+  register: function(username, email, password) {
     POST('api/accounts/register', {username:username, email:email, password:password,isBot:false}, function(){}, function(){});
   },
 

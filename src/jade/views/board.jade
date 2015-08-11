@@ -3,4 +3,7 @@ extends ../layouts/default.jade
 block content
   #board_container
   //switch to app.min.js for production
-  script(src='../build/app.js') 
+  if 'production' == process.env.NODE_ENV
+    script(src='../build/app.min.js')
+  else
+    script(src='../build/app.js') 
